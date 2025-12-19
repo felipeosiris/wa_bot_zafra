@@ -1,3 +1,3 @@
 web: npm start
-release: bash scripts/post-migrate.sh || true
+release: npx prisma migrate deploy && sleep 2 && npm run seed || echo "⚠️ Release falló, pero continuando..."
 

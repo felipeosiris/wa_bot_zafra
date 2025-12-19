@@ -817,6 +817,77 @@ app.post("/whatsapp", async (req, res) => {
 
 app.get("/health", (_, res) => res.json({ ok: true }));
 
+// Endpoint para ejecutar migraciones manualmente
+app.get("/migrate", async (req, res) => {
+  const token = req.query.token;
+  const expectedToken = process.env.SEED_TOKEN || 'zafra-seed-2024';
+  
+  if (process.env.NODE_ENV === 'production' && token !== expectedToken) {
+    return res.status(401).send(`
+      <html>
+        <body style="font-family: Arial; padding: 20px;">
+          <h1>401 Unauthorized</h1>
+          <p>Proporciona el token: <code>?token=zafra-seed-2024</code></p>
+        </body>
+      </html>
+    `);
+  }
+  
+  try {
+    console.log('🔄 Ejecutando migraciones manualmente...');
+    const { execSync } = require('child_process');
+    
+    // Ejecutar migraciones
+    const migrateOutput = execSync('npx prisma migrate deploy', { 
+      encoding: 'utf8',
+      stdio: 'pipe'
+    });
+    
+    console.log('✅ Migraciones ejecutadas:', migrateOutput);
+    
+    // Verificar tablas creadas
+    const tables = await prisma.$queryRaw`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_type = 'BASE TABLE'
+      ORDER BY table_name;
+    `;
+    
+    res.send(`
+      <html>
+        <body style="font-family: Arial; padding: 20px; background: #f5f5f5;">
+          <div style="background: white; padding: 30px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #28a745;">✅ Migraciones ejecutadas exitosamente</h1>
+            <h2>📊 Tablas creadas:</h2>
+            <ul style="font-size: 16px; line-height: 1.8;">
+              ${tables.map(t => `<li><strong>${t.table_name}</strong></li>`).join('')}
+            </ul>
+            <p style="margin-top: 20px;">
+              <a href="/seed?token=${token || expectedToken}" style="color: #007bff; text-decoration: none; margin-right: 15px;">🌱 Ejecutar Seed</a>
+              <a href="/health" style="color: #007bff; text-decoration: none;">🔍 Health Check</a>
+            </p>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; font-size: 12px; overflow-x: auto;">${migrateOutput}</pre>
+          </div>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('❌ Error ejecutando migraciones:', error);
+    res.status(500).send(`
+      <html>
+        <body style="font-family: Arial; padding: 20px;">
+          <h1 style="color: #dc3545;">❌ Error ejecutando migraciones</h1>
+          <pre style="background: #f8f9fa; padding: 15px; border-radius: 4px;">${error.message}</pre>
+          ${error.stdout ? `<h3>Output:</h3><pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; font-size: 12px;">${error.stdout}</pre>` : ''}
+          ${error.stderr ? `<h3>Error:</h3><pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; font-size: 12px; color: #dc3545;">${error.stderr}</pre>` : ''}
+          ${process.env.NODE_ENV === 'development' ? `<pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; font-size: 12px;">${error.stack}</pre>` : ''}
+        </body>
+      </html>
+    `);
+  }
+});
+
 // Endpoint para ejecutar seed manualmente (solo en desarrollo o con autenticación)
 // Endpoint GET para ejecutar seed (más fácil desde navegador)
 app.get("/seed", async (req, res) => {
