@@ -630,33 +630,53 @@ async function handleViewReservations(phone) {
 
 // Endpoint principal
 app.post("/whatsapp", async (req, res) => {
-  const from = req.body.From;
-  const body = normalize(req.body.Body);
-  const phone = from.replace('whatsapp:', '');
-  
   const twiml = new MessagingResponse();
-  const session = sessions.get(from) || { step: "menu", data: {} };
   
-  // Manejar diferentes tipos de entrada
-  const listValue = req.body.ListId && req.body.ListItemId ? req.body.ListItemId : null;
-  const buttonValue = req.body.ButtonText ? normalize(req.body.ButtonText) : null;
-  const buttonPayload = req.body.ButtonPayload ? normalize(req.body.ButtonPayload) : null;
-  const selectedOption = listValue || buttonPayload || buttonValue || body;
-  
-  // Disparadores para volver al menú
-  if (body === "hola" || body === "menu" || body === "ayuda" || 
-      selectedOption === "menu" || buttonPayload === "menu") {
-    session.step = "menu";
-  }
-  
-  // Mostrar menú principal
-  if (session.step === "menu") {
-    await getMenuMessage(twiml);
-    session.step = "await_option";
-    sessions.set(from, session);
-    res.type("text/xml").send(twiml.toString());
-    return;
-  }
+  try {
+    const from = req.body.From;
+    const body = normalize(req.body.Body || '');
+    const phone = from ? from.replace('whatsapp:', '') : 'unknown';
+    
+    const session = sessions.get(from) || { step: "menu", data: {} };
+    
+    // Manejar diferentes tipos de entrada
+    const listValue = req.body.ListId && req.body.ListItemId ? req.body.ListItemId : null;
+    const buttonValue = req.body.ButtonText ? normalize(req.body.ButtonText) : null;
+    const buttonPayload = req.body.ButtonPayload ? normalize(req.body.ButtonPayload) : null;
+    const selectedOption = listValue || buttonPayload || buttonValue || body;
+    
+    // Disparadores para volver al menú
+    if (body === "hola" || body === "menu" || body === "ayuda" || 
+        selectedOption === "menu" || buttonPayload === "menu") {
+      session.step = "menu";
+    }
+    
+    // Mostrar menú principal
+    if (session.step === "menu") {
+      try {
+        await getMenuMessage(twiml);
+      } catch (error) {
+        console.error('Error obteniendo menú:', error);
+        // Si falla, usar menú básico sin BD
+        twiml.message(
+          `🍞 ¡Hola! Bienvenido a *Zafra*\n\n` +
+          `¿En qué puedo ayudarte? Selecciona una opción:\n\n` +
+          `1️⃣ 💰 Cotización\n` +
+          `2️⃣ 💵 Precios\n` +
+          `3️⃣ 📦 Disponibilidad\n` +
+          `4️⃣ 🚚 Entregas\n` +
+          `5️⃣ 📊 Stock\n` +
+          `6️⃣ 🎁 Preventa\n` +
+          `7️⃣ 🛒 Ver mi carrito\n` +
+          `8️⃣ 📋 Ver mis reservas\n\n` +
+          `📞 Contacto: 55 6805 9501`
+        );
+      }
+      session.step = "await_option";
+      sessions.set(from, session);
+      res.type("text/xml").send(twiml.toString());
+      return;
+    }
   
   // Procesar selección del menú
   if (session.step === "await_option") {
@@ -763,39 +783,392 @@ app.post("/whatsapp", async (req, res) => {
     return;
   }
   
-  // Fallback
-  const company = await prisma.company.findUnique({ where: { id: 'zafra' } });
-  twiml.message(
-    `No entendí tu mensaje 😅\n\n` +
-    `Escribe *menu* para ver todas las opciones disponibles.\n\n` +
-    `O contáctanos directamente:\n` +
-    `📞 ${company?.phone || "55 6805 9501"}\n` +
-    `🕐 ${company?.schedule || "Lunes a Viernes: 9:00 am - 6:00 pm"}`
-  );
-  sessions.set(from, session);
-  res.type("text/xml").send(twiml.toString());
+    // Fallback
+    try {
+      const company = await prisma.company.findUnique({ where: { id: 'zafra' } });
+      twiml.message(
+        `No entendí tu mensaje 😅\n\n` +
+        `Escribe *menu* para ver todas las opciones disponibles.\n\n` +
+        `O contáctanos directamente:\n` +
+        `📞 ${company?.phone || "55 6805 9501"}\n` +
+        `🕐 ${company?.schedule || "Lunes a Viernes: 9:00 am - 6:00 pm"}`
+      );
+    } catch (error) {
+      console.error('Error en fallback:', error);
+      twiml.message(
+        `No entendí tu mensaje 😅\n\n` +
+        `Escribe *menu* para ver todas las opciones disponibles.\n\n` +
+        `📞 Contacto: 55 6805 9501`
+      );
+    }
+    sessions.set(from, session);
+    res.type("text/xml").send(twiml.toString());
+  } catch (error) {
+    console.error('Error en endpoint /whatsapp:', error);
+    // Siempre responder algo para evitar 500
+    const errorTwiml = new MessagingResponse();
+    errorTwiml.message(
+      `⚠️ Ocurrió un error temporal. Por favor intenta de nuevo escribiendo *menu*.\n\n` +
+      `Si el problema persiste, contáctanos: 55 6805 9501`
+    );
+    res.type("text/xml").status(200).send(errorTwiml.toString());
+  }
 });
 
 app.get("/health", (_, res) => res.json({ ok: true }));
 
 // Endpoint para ejecutar seed manualmente (solo en desarrollo o con autenticación)
-app.post("/seed", async (req, res) => {
-  // En producción, deberías agregar autenticación aquí
-  if (process.env.NODE_ENV === 'production' && !req.headers.authorization) {
-    return res.status(401).json({ error: 'Unauthorized' });
+// Endpoint GET para ejecutar seed (más fácil desde navegador)
+app.get("/seed", async (req, res) => {
+  const token = req.query.token;
+  const expectedToken = process.env.SEED_TOKEN || 'zafra-seed-2024';
+  
+  if (process.env.NODE_ENV === 'production' && token !== expectedToken) {
+    return res.status(401).send(`
+      <html>
+        <body style="font-family: Arial; padding: 20px;">
+          <h1>401 Unauthorized</h1>
+          <p>Proporciona el token: <code>?token=zafra-seed-2024</code></p>
+          <p>O configura SEED_TOKEN en Railway y usa ese valor</p>
+        </body>
+      </html>
+    `);
   }
   
   try {
-    const { exec } = require('child_process');
-    exec('npm run seed', (error, stdout, stderr) => {
-      if (error) {
-        console.error('Error ejecutando seed:', error);
-        return res.status(500).json({ error: 'Error ejecutando seed', details: error.message });
-      }
-      res.json({ success: true, output: stdout });
+    console.log('🌱 Ejecutando seed manualmente desde GET...');
+    
+    // Ejecutar seed directamente
+    const fs = require('fs');
+    const path = require('path');
+    const dataPath = path.join(__dirname, 'data', 'products.json');
+    const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+
+    // Ejecutar seed
+    console.log('📋 Creando información de la empresa...');
+    await prisma.company.upsert({
+      where: { id: 'zafra' },
+      update: {
+        name: data.company.name,
+        description: data.company.description,
+        phone: data.company.phone,
+        schedule: data.company.schedule,
+        address: data.company.address,
+      },
+      create: {
+        id: 'zafra',
+        name: data.company.name,
+        description: data.company.description,
+        phone: data.company.phone,
+        schedule: data.company.schedule,
+        address: data.company.address,
+      },
     });
+
+    console.log('📂 Creando categorías...');
+    for (const cat of data.categories) {
+      await prisma.category.upsert({
+        where: { id: cat.id },
+        update: { name: cat.name, description: cat.description },
+        create: { id: cat.id, name: cat.name, description: cat.description },
+      });
+    }
+
+    console.log('📦 Creando productos...');
+    for (const product of data.products) {
+      await prisma.product.upsert({
+        where: { id: product.id },
+        update: {
+          name: product.name,
+          categoryId: product.categoryId,
+          price: product.price,
+          stock: product.stock,
+          available: product.available,
+          deliveryDays: product.deliveryDays,
+          unit: product.unit,
+          minOrder: product.minOrder || 1,
+        },
+        create: {
+          id: product.id,
+          name: product.name,
+          categoryId: product.categoryId,
+          price: product.price,
+          stock: product.stock,
+          available: product.available,
+          deliveryDays: product.deliveryDays,
+          unit: product.unit,
+          minOrder: product.minOrder || 1,
+        },
+      });
+    }
+
+    console.log('🚚 Creando zonas de entrega...');
+    for (const zone of data.deliveryZones) {
+      await prisma.deliveryZone.upsert({
+        where: { id: zone.zone.replace(/\s+/g, '_').toLowerCase() },
+        update: {
+          zone: zone.zone,
+          days: zone.days,
+          cost: zone.cost,
+          description: zone.description,
+        },
+        create: {
+          id: zone.zone.replace(/\s+/g, '_').toLowerCase(),
+          zone: zone.zone,
+          days: zone.days,
+          cost: zone.cost,
+          description: zone.description,
+        },
+      });
+    }
+
+    console.log('🎁 Creando productos en preventa...');
+    for (const presale of data.presaleProducts) {
+      await prisma.presaleProduct.upsert({
+        where: { id: presale.id },
+        update: {
+          name: presale.name,
+          category: presale.category,
+          price: presale.price,
+          releaseDate: presale.releaseDate,
+          deposit: presale.deposit,
+          description: presale.description,
+        },
+        create: {
+          id: presale.id,
+          name: presale.name,
+          category: presale.category,
+          price: presale.price,
+          releaseDate: presale.releaseDate,
+          deposit: presale.deposit,
+          description: presale.description,
+        },
+      });
+    }
+
+    const counts = {
+      company: await prisma.company.count(),
+      categories: await prisma.category.count(),
+      products: await prisma.product.count(),
+      zones: await prisma.deliveryZone.count(),
+      presales: await prisma.presaleProduct.count(),
+    };
+    
+    console.log('✅ Seed completado exitosamente!');
+    console.log('📊 Resumen:', counts);
+    
+    res.send(`
+      <html>
+        <body style="font-family: Arial; padding: 20px; background: #f5f5f5;">
+          <div style="background: white; padding: 30px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #28a745;">✅ Seed ejecutado exitosamente</h1>
+            <h2>📊 Datos insertados:</h2>
+            <ul style="font-size: 16px; line-height: 1.8;">
+              <li><strong>Empresa:</strong> ${counts.company}</li>
+              <li><strong>Categorías:</strong> ${counts.categories}</li>
+              <li><strong>Productos:</strong> ${counts.products}</li>
+              <li><strong>Zonas de entrega:</strong> ${counts.zones}</li>
+              <li><strong>Productos en preventa:</strong> ${counts.presales}</li>
+            </ul>
+            <p style="margin-top: 20px;">
+              <a href="/health" style="color: #007bff; text-decoration: none;">🔍 Ver health check</a>
+            </p>
+          </div>
+        </body>
+      </html>
+    `);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Error ejecutando seed:', error);
+    res.status(500).send(`
+      <html>
+        <body style="font-family: Arial; padding: 20px;">
+          <h1 style="color: #dc3545;">❌ Error ejecutando seed</h1>
+          <pre style="background: #f8f9fa; padding: 15px; border-radius: 4px;">${error.message}</pre>
+          ${process.env.NODE_ENV === 'development' ? `<pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; font-size: 12px;">${error.stack}</pre>` : ''}
+        </body>
+      </html>
+    `);
+  }
+});
+
+// Endpoint POST para ejecutar seed
+app.post("/seed", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.body.token;
+  const expectedToken = process.env.SEED_TOKEN || 'zafra-seed-2024';
+  
+  if (process.env.NODE_ENV === 'production' && token !== expectedToken) {
+    return res.status(401).json({ 
+      error: 'Unauthorized', 
+      message: 'Proporciona token en Authorization: Bearer TOKEN o body.token' 
+    });
+  }
+  
+  // Redirigir a GET para ejecutar el seed
+  return res.redirect(`/seed?token=${token || expectedToken}`);
+});
+
+// Endpoint GET para ejecutar seed (más fácil desde navegador)
+app.get("/seed", async (req, res) => {
+  const token = req.query.token;
+  const expectedToken = process.env.SEED_TOKEN || 'zafra-seed-2024';
+  
+  if (process.env.NODE_ENV === 'production' && token !== expectedToken) {
+    return res.status(401).send(`
+      <html>
+        <body>
+          <h1>401 Unauthorized</h1>
+          <p>Proporciona el token: ?token=TU_TOKEN</p>
+          <p>O usa POST /seed con Authorization header</p>
+        </body>
+      </html>
+    `);
+  }
+  
+  try {
+    console.log('🌱 Ejecutando seed manualmente desde GET...');
+    // Ejecutar seed directamente
+    const { PrismaClient } = require('@prisma/client');
+    const seedPrisma = new PrismaClient();
+    const fs = require('fs');
+    const path = require('path');
+    
+    const dataPath = path.join(__dirname, 'data', 'products.json');
+    const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+
+    // Ejecutar seed
+    await seedPrisma.company.upsert({
+      where: { id: 'zafra' },
+      update: {
+        name: data.company.name,
+        description: data.company.description,
+        phone: data.company.phone,
+        schedule: data.company.schedule,
+        address: data.company.address,
+      },
+      create: {
+        id: 'zafra',
+        name: data.company.name,
+        description: data.company.description,
+        phone: data.company.phone,
+        schedule: data.company.schedule,
+        address: data.company.address,
+      },
+    });
+
+    for (const cat of data.categories) {
+      await seedPrisma.category.upsert({
+        where: { id: cat.id },
+        update: { name: cat.name, description: cat.description },
+        create: { id: cat.id, name: cat.name, description: cat.description },
+      });
+    }
+
+    for (const product of data.products) {
+      await seedPrisma.product.upsert({
+        where: { id: product.id },
+        update: {
+          name: product.name,
+          categoryId: product.categoryId,
+          price: product.price,
+          stock: product.stock,
+          available: product.available,
+          deliveryDays: product.deliveryDays,
+          unit: product.unit,
+          minOrder: product.minOrder || 1,
+        },
+        create: {
+          id: product.id,
+          name: product.name,
+          categoryId: product.categoryId,
+          price: product.price,
+          stock: product.stock,
+          available: product.available,
+          deliveryDays: product.deliveryDays,
+          unit: product.unit,
+          minOrder: product.minOrder || 1,
+        },
+      });
+    }
+
+    for (const zone of data.deliveryZones) {
+      await seedPrisma.deliveryZone.upsert({
+        where: { id: zone.zone.replace(/\s+/g, '_').toLowerCase() },
+        update: {
+          zone: zone.zone,
+          days: zone.days,
+          cost: zone.cost,
+          description: zone.description,
+        },
+        create: {
+          id: zone.zone.replace(/\s+/g, '_').toLowerCase(),
+          zone: zone.zone,
+          days: zone.days,
+          cost: zone.cost,
+          description: zone.description,
+        },
+      });
+    }
+
+    for (const presale of data.presaleProducts) {
+      await seedPrisma.presaleProduct.upsert({
+        where: { id: presale.id },
+        update: {
+          name: presale.name,
+          category: presale.category,
+          price: presale.price,
+          releaseDate: presale.releaseDate,
+          deposit: presale.deposit,
+          description: presale.description,
+        },
+        create: {
+          id: presale.id,
+          name: presale.name,
+          category: presale.category,
+          price: presale.price,
+          releaseDate: presale.releaseDate,
+          deposit: presale.deposit,
+          description: presale.description,
+        },
+      });
+    }
+
+    await seedPrisma.$disconnect();
+    
+    const counts = {
+      company: await prisma.company.count(),
+      categories: await prisma.category.count(),
+      products: await prisma.product.count(),
+      zones: await prisma.deliveryZone.count(),
+      presales: await prisma.presaleProduct.count(),
+    };
+    
+    res.send(`
+      <html>
+        <body style="font-family: Arial; padding: 20px;">
+          <h1>✅ Seed ejecutado exitosamente</h1>
+          <h2>Datos insertados:</h2>
+          <ul>
+            <li>Empresa: ${counts.company}</li>
+            <li>Categorías: ${counts.categories}</li>
+            <li>Productos: ${counts.products}</li>
+            <li>Zonas de entrega: ${counts.zones}</li>
+            <li>Productos en preventa: ${counts.presales}</li>
+          </ul>
+          <p><a href="/health">Ver health check</a></p>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Error ejecutando seed:', error);
+    res.status(500).send(`
+      <html>
+        <body style="font-family: Arial; padding: 20px;">
+          <h1>❌ Error ejecutando seed</h1>
+          <pre>${error.message}</pre>
+          ${process.env.NODE_ENV === 'development' ? `<pre>${error.stack}</pre>` : ''}
+        </body>
+      </html>
+    `);
   }
 });
 
