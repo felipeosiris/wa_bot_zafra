@@ -800,15 +800,33 @@ app.post("/seed", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Función para verificar conexión a la base de datos
+async function checkDatabase() {
+  try {
+    await prisma.$connect();
+    console.log('✅ Conectado a la base de datos');
+    
+    // Verificar que las tablas existan
+    const company = await prisma.company.findUnique({ where: { id: 'zafra' } }).catch(() => null);
+    const productCount = await prisma.product.count().catch(() => 0);
+    const categoryCount = await prisma.category.count().catch(() => 0);
+    const zoneCount = await prisma.deliveryZone.count().catch(() => 0);
+    
+    console.log(`🍞 ${company?.name || "Zafra"} - Bot de WhatsApp`);
+    console.log(`📦 Productos: ${productCount}`);
+    console.log(`📋 Categorías: ${categoryCount}`);
+    console.log(`🚚 Zonas de entrega: ${zoneCount}`);
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Error conectando a la base de datos:', error.message);
+    console.error('💡 Asegúrate de que las migraciones se hayan ejecutado correctamente');
+    return false;
+  }
+}
+
 app.listen(PORT, async () => {
-  const company = await prisma.company.findUnique({ where: { id: 'zafra' } });
-  const productCount = await prisma.product.count();
-  const categoryCount = await prisma.category.count();
-  const zoneCount = await prisma.deliveryZone.count();
-  
   console.log(`🚀 Servidor escuchando en http://localhost:${PORT}`);
-  console.log(`🍞 ${company?.name || "Zafra"} - Bot de WhatsApp`);
-  console.log(`📦 Productos cargados: ${productCount}`);
-  console.log(`📋 Categorías: ${categoryCount}`);
-  console.log(`🚚 Zonas de entrega: ${zoneCount}`);
+  await checkDatabase();
 });
