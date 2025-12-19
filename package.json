@@ -5,8 +5,8 @@
   "scripts": {
     "start": "tsx index.js",
     "dev": "tsx index.js",
-    "build": "prisma generate",
-    "postinstall": "prisma generate",
+    "build": "rm -rf node_modules/.prisma/client && prisma generate && node scripts/postbuild.js",
+    "postinstall": "npm run build",
     "seed": "tsx scripts/seed.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
