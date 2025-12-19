@@ -1,0 +1,237 @@
+{
+  "company": {
+    "name": "Distribuidora Azucarera Zafra",
+    "description": "Más de 30 años suministrando insumos de la más alta calidad para panadería y repostería",
+    "phone": "55 6805 9501",
+    "schedule": "Lunes a Viernes: 9:00 am - 6:00 pm",
+    "address": "Avenida Central de Abastos, 09040 Ciudad de México"
+  },
+  "categories": [
+    {
+      "id": "CAT001",
+      "name": "Coberturas de Chocolate",
+      "description": "Chocolates premium para repostería y panadería"
+    },
+    {
+      "id": "CAT002",
+      "name": "Harinas y Subproductos",
+      "description": "Harinas premium y derivados de la más alta calidad"
+    },
+    {
+      "id": "CAT003",
+      "name": "Lácteos Culinarios",
+      "description": "Productos lácteos especializados para uso culinario"
+    },
+    {
+      "id": "CAT004",
+      "name": "Toppings",
+      "description": "Decoraciones y complementos para postres"
+    },
+    {
+      "id": "CAT005",
+      "name": "Chantilly y Levaduras",
+      "description": "Ingredientes esenciales para panadería y repostería"
+    }
+  ],
+  "products": [
+    {
+      "id": "ZAF001",
+      "name": "Chocolate para Cobertura Semiamargo 1kg",
+      "category": "Coberturas de Chocolate",
+      "categoryId": "CAT001",
+      "price": 285.00,
+      "stock": 45,
+      "available": true,
+      "deliveryDays": 2,
+      "unit": "kg",
+      "minOrder": 5
+    },
+    {
+      "id": "ZAF002",
+      "name": "Chocolate para Cobertura Blanco 1kg",
+      "category": "Coberturas de Chocolate",
+      "categoryId": "CAT001",
+      "price": 295.00,
+      "stock": 38,
+      "available": true,
+      "deliveryDays": 2,
+      "unit": "kg",
+      "minOrder": 5
+    },
+    {
+      "id": "ZAF003",
+      "name": "Harina de Trigo Premium 50kg",
+      "category": "Harinas y Subproductos",
+      "categoryId": "CAT002",
+      "price": 850.00,
+      "stock": 120,
+      "available": true,
+      "deliveryDays": 1,
+      "unit": "saco",
+      "minOrder": 1
+    },
+    {
+      "id": "ZAF004",
+      "name": "Harina de Repostería 25kg",
+      "category": "Harinas y Subproductos",
+      "categoryId": "CAT002",
+      "price": 520.00,
+      "stock": 65,
+      "available": true,
+      "deliveryDays": 1,
+      "unit": "saco",
+      "minOrder": 1
+    },
+    {
+      "id": "ZAF005",
+      "name": "Leche Condensada Nestlé 1kg",
+      "category": "Lácteos Culinarios",
+      "categoryId": "CAT003",
+      "price": 65.00,
+      "stock": 200,
+      "available": true,
+      "deliveryDays": 1,
+      "unit": "lata",
+      "minOrder": 12
+    },
+    {
+      "id": "ZAF006",
+      "name": "Crema para Batir 1L",
+      "category": "Lácteos Culinarios",
+      "categoryId": "CAT003",
+      "price": 85.00,
+      "stock": 150,
+      "available": true,
+      "deliveryDays": 1,
+      "unit": "litro",
+      "minOrder": 6
+    },
+    {
+      "id": "ZAF007",
+      "name": "Topping de Fresa 1kg",
+      "category": "Toppings",
+      "categoryId": "CAT004",
+      "price": 125.00,
+      "stock": 55,
+      "available": true,
+      "deliveryDays": 2,
+      "unit": "kg",
+      "minOrder": 3
+    },
+    {
+      "id": "ZAF008",
+      "name": "Topping de Chocolate 1kg",
+      "category": "Toppings",
+      "categoryId": "CAT004",
+      "price": 130.00,
+      "stock": 42,
+      "available": true,
+      "deliveryDays": 2,
+      "unit": "kg",
+      "minOrder": 3
+    },
+    {
+      "id": "ZAF009",
+      "name": "Levadura Seca Instantánea 500g",
+      "category": "Chantilly y Levaduras",
+      "categoryId": "CAT005",
+      "price": 95.00,
+      "stock": 80,
+      "available": true,
+      "deliveryDays": 1,
+      "unit": "paquete",
+      "minOrder": 10
+    },
+    {
+      "id": "ZAF010",
+      "name": "Chantilly en Polvo 500g",
+      "category": "Chantilly y Levaduras",
+      "categoryId": "CAT005",
+      "price": 75.00,
+      "stock": 95,
+      "available": true,
+      "deliveryDays": 1,
+      "unit": "paquete",
+      "minOrder": 12
+    },
+    {
+      "id": "ZAF011",
+      "name": "Chocolate para Cobertura con Leche 1kg",
+      "category": "Coberturas de Chocolate",
+      "categoryId": "CAT001",
+      "price": 290.00,
+      "stock": 0,
+      "available": false,
+      "deliveryDays": 5,
+      "unit": "kg",
+      "minOrder": 5
+    },
+    {
+      "id": "ZAF012",
+      "name": "Harina Integral 25kg",
+      "category": "Harinas y Subproductos",
+      "categoryId": "CAT002",
+      "price": 580.00,
+      "stock": 25,
+      "available": true,
+      "deliveryDays": 2,
+      "unit": "saco",
+      "minOrder": 1
+    }
+  ],
+  "deliveryZones": [
+    {
+      "zone": "Ciudad de México - Centro",
+      "days": 1,
+      "cost": 80.00,
+      "description": "Zona centro y áreas cercanas"
+    },
+    {
+      "zone": "Ciudad de México - Periferia",
+      "days": 2,
+      "cost": 120.00,
+      "description": "Zonas periféricas de la CDMX"
+    },
+    {
+      "zone": "Estado de México",
+      "days": 2,
+      "cost": 150.00,
+      "description": "Municipios del Estado de México"
+    },
+    {
+      "zone": "Foráneo",
+      "days": 3,
+      "cost": 250.00,
+      "description": "Otras ciudades (cotización especial)"
+    }
+  ],
+  "presaleProducts": [
+    {
+      "id": "PRE001",
+      "name": "Chocolate Premium Belga 1kg",
+      "category": "Coberturas de Chocolate",
+      "price": 450.00,
+      "releaseDate": "2024-04-15",
+      "deposit": 100.00,
+      "description": "Nueva línea de chocolate premium importado"
+    },
+    {
+      "id": "PRE002",
+      "name": "Harina Orgánica Certificada 25kg",
+      "category": "Harinas y Subproductos",
+      "price": 750.00,
+      "releaseDate": "2024-05-01",
+      "deposit": 150.00,
+      "description": "Harina orgánica de nueva cosecha"
+    }
+  ],
+  "branches": [
+    {
+      "id": "SUC001",
+      "name": "Sucursal Central de Abastos",
+      "address": "Avenida Central de Abastos, 09040 Ciudad de México",
+      "phone": "55 6805 9501",
+      "schedule": "Lunes a Viernes: 9:00 am - 6:00 pm"
+    }
+  ]
+}

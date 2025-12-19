@@ -1,0 +1,128 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id          String   @id @default("zafra")
+  name        String
+  description String?
+  phone       String
+  schedule    String
+  address     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Category {
+  id          String    @id
+  name        String
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id            String      @id
+  name          String
+  categoryId    String
+  category      Category    @relation(fields: [categoryId], references: [id])
+  price         Float
+  stock         Int         @default(0)
+  available     Boolean     @default(true)
+  deliveryDays Int
+  unit          String
+  minOrder      Int         @default(1)
+  cartItems     CartItem[]
+  reservationItems ReservationItem[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model DeliveryZone {
+  id          String   @id
+  zone        String
+  days        Int
+  cost        Float
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PresaleProduct {
+  id          String   @id
+  name        String
+  category    String?
+  price        Float
+  releaseDate String
+  deposit     Float
+  description String?
+  reservationItems ReservationItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  phone     String     // Número de WhatsApp del cliente
+  items     CartItem[]
+  status    String     @default("active") // active, completed, abandoned
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([phone])
+  @@index([status])
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cartId])
+  @@index([productId])
+}
+
+model Reservation {
+  id        String            @id @default(uuid())
+  phone     String            // Número de WhatsApp del cliente
+  items     ReservationItem[]
+  status    String            @default("pending") // pending, confirmed, cancelled
+  total     Float?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([phone])
+  @@index([status])
+}
+
+model ReservationItem {
+  id              String       @id @default(uuid())
+  reservationId   String
+  reservation     Reservation  @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  productId       String?
+  product         Product?     @relation(fields: [productId], references: [id])
+  presaleProductId String?
+  presaleProduct  PresaleProduct? @relation(fields: [presaleProductId], references: [id])
+  quantity        Int
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([reservationId])
+  @@index([productId])
+  @@index([presaleProductId])
+}
