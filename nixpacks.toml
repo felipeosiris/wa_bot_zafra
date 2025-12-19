@@ -5,7 +5,7 @@ nixPkgs = ["nodejs-18_x"]
 cmds = ["npm ci"]
 
 [phases.build]
-cmds = ["rm -rf node_modules/.prisma/client || true", "prisma generate"]
+cmds = ["rm -rf node_modules/.prisma || true", "prisma generate"]
 
 [start]
 cmd = "npm start"
