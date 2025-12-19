@@ -9,7 +9,7 @@
     "build": "prisma generate",
     "postbuild": "node scripts/postbuild.js",
     "postinstall": "npm run prebuild && npm run build && npm run postbuild",
-    "seed": "tsx scripts/seed.js",
+    "seed": "node scripts/seed-simple.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:studio": "prisma studio"

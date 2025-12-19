@@ -1,3 +1,3 @@
 web: npm start
-release: npx prisma migrate deploy || true
+release: npx prisma migrate deploy && npm run seed || true
 

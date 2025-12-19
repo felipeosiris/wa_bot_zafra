@@ -778,6 +778,27 @@ app.post("/whatsapp", async (req, res) => {
 
 app.get("/health", (_, res) => res.json({ ok: true }));
 
+// Endpoint para ejecutar seed manualmente (solo en desarrollo o con autenticación)
+app.post("/seed", async (req, res) => {
+  // En producción, deberías agregar autenticación aquí
+  if (process.env.NODE_ENV === 'production' && !req.headers.authorization) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  try {
+    const { exec } = require('child_process');
+    exec('npm run seed', (error, stdout, stderr) => {
+      if (error) {
+        console.error('Error ejecutando seed:', error);
+        return res.status(500).json({ error: 'Error ejecutando seed', details: error.message });
+      }
+      res.json({ success: true, output: stdout });
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
   const company = await prisma.company.findUnique({ where: { id: 'zafra' } });

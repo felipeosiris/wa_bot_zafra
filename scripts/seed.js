@@ -5,9 +5,17 @@ const prisma = new PrismaClient();
 const fs = require('fs');
 const path = require('path');
 
-
 async function main() {
-  console.log('🌱 Iniciando migración de datos...');
+  console.log('🌱 Iniciando migración de datos a PostgreSQL...');
+  
+  // Verificar conexión a la base de datos
+  try {
+    await prisma.$connect();
+    console.log('✅ Conectado a la base de datos');
+  } catch (error) {
+    console.error('❌ Error conectando a la base de datos:', error.message);
+    throw error;
+  }
 
   // Leer datos del JSON
   const dataPath = path.join(__dirname, '..', 'data', 'products.json');
@@ -126,7 +134,20 @@ async function main() {
     });
   }
 
-  console.log('✅ Migración completada exitosamente!');
+  // Verificar datos insertados
+  const companyCount = await prisma.company.count();
+  const categoryCount = await prisma.category.count();
+  const productCount = await prisma.product.count();
+  const zoneCount = await prisma.deliveryZone.count();
+  const presaleCount = await prisma.presaleProduct.count();
+  
+  console.log('\n📊 Resumen de datos:');
+  console.log(`   - Empresa: ${companyCount}`);
+  console.log(`   - Categorías: ${categoryCount}`);
+  console.log(`   - Productos: ${productCount}`);
+  console.log(`   - Zonas de entrega: ${zoneCount}`);
+  console.log(`   - Productos en preventa: ${presaleCount}`);
+  console.log('\n✅ Migración completada exitosamente!');
 }
 
 main()
